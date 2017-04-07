@@ -1,7 +1,26 @@
+<!--
+Information Visualization: D3 partner assignment.
+Parallel Coordinates chart component, by Rachel Thorp.
+
+Main structure of the code is borrowed from Jason Davies's Parallel Coordinates
+Chart (https://bl.ocks.org/jasondavies/1341281), with a number of modifications
+made for improved interactivity:
+
+- altered color scheme
+- added line highlighting and tooltip (referenced http://people.ischool.berkeley.edu/~japple/jeopardy/)
+- brought highlighted line to the front (referenced https://bl.ocks.org/mbostock/3709000)
+- swapped scale of world_rank to better represent the data (low values indicate better performance)
+
+-->
+
+
 <!DOCTYPE html>
 <meta charset="utf-8">
 <meta property="og:title" content="2016 University Rankings">
 <title>2016 University Rankings</title>
+<h1>2016 University Rankings</h1>
+<h4>Parallel coordinates chart visualization of world rankings of the top 200 universities in 2016.</h4>
+
 <style>
 
 svg {
@@ -37,18 +56,6 @@ svg {
   cursor: move;
 }
 
-/*.tooltip {
-  position: absolute;
-  text-align: center;
-  width: 60px;
-  height: 28px;
-  padding: 2px;
-  font: 12px sans-serif;
-  background: white;
-  border: 0px;
-  border-radius: 8px;
-  pointer-events: none;
-}*/
 
 </style>
 <body>
@@ -59,7 +66,14 @@ var tooltip = d3.select("body")
     .append("div")
     .style("position", "absolute")
     .style("z-index", "10")
+    .style("background",'white')
+    .style("border-width", "1px")
+    .style("border-color", "black")
+    .style("border-style", "solid")
     .style("visibility", "hidden")
+    .style("font", "12px sans-serif")
+    .style("font-weight", "bold")
+    .style("padding", "1px")
     .attr("class","sc_tooltip");
 
 var margin = {top: 30, right: 10, bottom: 10, left: 10},
@@ -81,15 +95,21 @@ var svg = d3.select("body").append("svg")
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+
 d3.csv("timesData.csv", function(error, schools) {
-  // d3.csv("data/top_50_male.csv", function(error, schools1) {
-  //   d3.csv("data/top_50_female.csv", function(error, schools2) {
 
   // Extract the list of dimensions and create a scale for each.
   x.domain(dimensions = d3.keys(schools[0]).filter(function(d) {
-    return d != "university_name" && (y[d] = d3.scale.linear()
-        .domain(d3.extent(schools, function(p) { return +p[d]; }))
-        .range([height, 0]));
+    // swapping scale for rank
+    if (d == "world_rank"){
+        return d != "university_name" && (y[d] = d3.scale.linear()
+          .domain(d3.extent(schools, function(p) { return +p[d]; }))
+          .range([0, height]));
+    } else{
+        return d != "university_name" && (y[d] = d3.scale.linear()
+          .domain(d3.extent(schools, function(p) { return +p[d]; }))
+          .range([height, 0]));
+        }
   }));
 
   // Add grey background lines for context.
@@ -109,6 +129,7 @@ d3.csv("timesData.csv", function(error, schools) {
       .attr("d", path)
       .on("mouseover", function(n){
     d3.select(this).transition().duration(100)
+      .each(moveToFront)    // move highlighted line to the front
       .style({'stroke' : '#a9511e'})
       .style({'stroke-width' : '3'});
     tooltip.text(n.university_name);
@@ -121,7 +142,6 @@ d3.csv("timesData.csv", function(error, schools) {
     .style({'stroke-width' : '1'});
     return tooltip.style("visibility", "hidden");
     });
-
 
   // Add a group element for each dimension.
   var g = svg.selectAll(".dimension")
@@ -174,31 +194,10 @@ d3.csv("timesData.csv", function(error, schools) {
       .attr("width", 16);
 });
 
-//
-// Rebind the axis data to simplify mouseover.
-// svg.select(".axis").selectAll("text:not(.title)")
-//     .attr("class", "label")
-//     .data(data, function(d) { return d.name || d; });
-
-// var projection = svg.selectAll(".axis text,.background path,.foreground path")
-//     .on("mouseover", mouseover)
-//     .on("mouseout", mouseout);
-// //
-// function mouseover(d) {
-//   svg.classed("active", true);
-//   projection.classed("inactive", function(p) { return p !== d; });
-//   projection.filter(function(p) { return p === d; }).each(moveToFront);
-// }
-// //
-// function mouseout(d) {
-//   svg.classed("active", false);
-//   projection.classed("inactive", false);
-// }
-//
-// function moveToFront() {
-//   this.parentNode.appendChild(this);
-// }
-// //
+// for bringing highlighted line to the front
+function moveToFront() {
+  this.parentNode.appendChild(this);
+}
 
 function position(d) {
   var v = dragging[d];
@@ -230,3 +229,29 @@ function brush() {
 }
 
 </script>
+
+
+<h3>Instructions</h3>
+<p>To toggle column ordering, hover over a column name and drag to desired location.
+To select subsets of data according to column value ranges, hover over the desired
+column axis, click when a plus sign appears, and drag. Combinations of selections can be performed,
+and a selection box can be dragged along one axis to adjust.
+To remove a selection, double-click on the selected axis.</p>
+
+<h3>Parameter Descriptions</h3>
+<p>The dataset parameters are defined as follows:</p>
+<li> <b> world_rank: </b> university rank, from 1 (best) to 200 </li>
+<li> <b> teaching: </b> teaching quality score of the university </li>
+<li> <b> international: </b> international score of university </li>
+<li> <b> research: </b> university score for research results and/or influences </li>
+<li> <b> citations: </b> university score for citation output and/or influence </li>
+<li> <b> income: </b> score for student income </li>
+<li> <b> total_score: </b> total ranking score </li>
+<li> <b> num_students: </b> number of enrolled students </li>
+<li> <b> student_staff_ratio: </b> number of enrolled students divided by the number of university staff members </li>
+<li> <b> international_students: </b> number of enrolled international students </li>
+<li> <b> female_male_ratio: </b> number of enrolled female students divided by the number of enrolled male students (in percent) </li>
+
+
+
+<p>Data represents rankings from the Times Higher Education World University report, obtained from Kaggle.</p>
